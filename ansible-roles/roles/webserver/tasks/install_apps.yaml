@@ -1,0 +1,8 @@
+---
+- package: 
+    name: 
+      - git
+      - httpd
+      - php
+      - php-mysqlnd
+    state: latest

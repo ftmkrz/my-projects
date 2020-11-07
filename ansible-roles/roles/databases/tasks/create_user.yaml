@@ -1,0 +1,9 @@
+---
+- mysql_user:
+    name: remoteUser
+    password: "Fatma123"
+    login_user: "root"
+    login_password: "Fatma123"
+    priv: '*.*:ALL,Grant'
+    state: present
+    host: "{{ groups['server_webserver'] | join('') }}"

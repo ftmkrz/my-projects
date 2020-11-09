@@ -1,0 +1,12 @@
+plugin: aws_ec2
+aws_access_key: AKIA22SLL3LZOKVTD4G2
+aws_scret_key: dAIxlMPMfHC0lVPaNPzBJSjiFbeBXmjwJmo98j8V
+regions:
+- us-east-1
+keyed_groups:
+- key: tags['Name']
+  prefix: 'server'
+  key: instance_type
+  prefix: 'i_type'
+compose:
+  ansible_user: "'ec2-user'"

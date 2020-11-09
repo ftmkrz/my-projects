@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  This Cloudformation Template creates master and worker nodes
+  with kubectl, kubelet, kubeadm, and docker installed on ubuntu image.
+Parameters:
+  KeyPair:
+    Description: Enter the name of your Key Pair for SSH Connection.
+    Type: 'AWS::EC2::KeyPair::KeyName'
+  InstanceType:
+    Description: Please select the instance type.
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - "t2.micro"
+      - "t2.medium" 
+  NumberWorker:
+    Description: Please set the number of worker instances.
+    Type: Number
+    Default: 2
+  AvailabilityZone:
+    Description: Please select the AvailabilityZone for this deployment
+    Type: AWS::EC2::AvailabilityZone::Name 
+Resources:
+  MasterSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Kubernetes master security group
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: 22
+          IpProtocol: tcp 
+          ToPort: 22
+        - CidrIp: 0.0.0.0/0
+          FromPort: 80
+          IpProtocol: tcp 
+          ToPort: 80
+        - IpProtocol: tcp
+          FromPort: 6443
+          ToPort: 6443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 2379
+          ToPort: 2380
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 10250
+          ToPort: 10250
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 10251
+          ToPort: 10251
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 10252
+          ToPort: 10252
+          CidrIp: 0.0.0.0/0      
+  WorkerSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Kubernetes worker security group
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: 22
+          IpProtocol: tcp 
+          ToPort: 22
+        - CidrIp: 0.0.0.0/0
+          FromPort: 80
+          IpProtocol: tcp 
+          ToPort: 80
+        - IpProtocol: tcp
+          FromPort: 30000
+          ToPort: 32767
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 10250
+          ToPort: 10250
+          CidrIp: 0.0.0.0/0    
+  KubeMaster:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      ImageId: ami-0dba2cb6798deb6d8
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPair
+      AvailabilityZone: !Ref AvailabilityZone
+      SecurityGroups:
+        - !Ref MasterSG
+      Tags:
+        - Key: Name
+          Value: KubeMaster
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash -xe
+          apt-get update -y
+          apt-get update && apt-get install -y apt-transport-https curl
+          curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+          cat <<EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
+          deb https://apt.kubernetes.io/ kubernetes-xenial main
+          EOF
+          apt-get update -y
+          apt-get install -y kubelet kubeadm kubectl docker.io
+          apt-mark hold kubelet kubeadm kubectl docker.io
+          hostnamectl set-hostname master
+          usermod -aG docker ubuntu
+          systemctl start docker.service
+  KubeWorker:
+    Type: "AWS::AutoScaling::AutoScalingGroup"
+    Properties:
+      AutoScalingGroupName: String
+      DesiredCapacity: !Ref NumberWorker
+      LaunchConfigurationName: !Ref WorkerConfiguration
+      MaxSize: !Ref NumberWorker #required
+      MinSize: !Ref NumberWorker #required
+      AvailabilityZones:
+          - !Ref AvailabilityZone
+      Tags:
+        - Key: Name
+          PropagateAtLaunch: true
+          Value: KubeWorker
+  WorkerConfiguration:
+    Type: "AWS::AutoScaling::LaunchConfiguration"
+    Properties:
+      ImageId: ami-0dba2cb6798deb6d8
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPair
+      LaunchConfigurationName: WorkerConfiguration
+      SecurityGroups:
+        - !Ref WorkerSG
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash -xe
+          apt-get update -y
+          apt-get update && apt-get install -y apt-transport-https curl
+          curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+          cat <<EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
+          deb https://apt.kubernetes.io/ kubernetes-xenial main
+          EOF
+          apt-get update -y
+          apt-get install -y kubelet kubeadm kubectl docker.io
+          apt-mark hold kubelet kubeadm kubectl docker.io
+          hostnamectl set-hostname worker
+          usermod -aG docker ubuntu
+          systemctl start docker.service                  

@@ -3,7 +3,7 @@ from mysql.connector import errorcode
 import time
 
 config = {
-    'user': 'talha-01',
+    'user': 'fatma',
     'password': 'phonebook_123',
     'host': 'database',
     'database':'phonebook',

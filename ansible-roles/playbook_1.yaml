@@ -12,7 +12,7 @@
   - name: save the key
     lineinfile: 
       create: 'yes'
-      path: /home/fatma/.aws/keys/last_key.pem
+      path: /home/fatmanur/.aws/keys/last_key.pem
       line: "{{ test_key_pass.key.private_key }}"
       mode: 0400
   - name: gather vpc facts
